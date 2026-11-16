@@ -37,6 +37,10 @@ func (formatter *ExtendedFormatter) SetOutput(writer io.Writer) {
 	formatter.writer = writer
 }
 
+func (formatter *ExtendedFormatter) FormatReceivers(receivers []string) error {
+	return (&SimpleFormatter{writer: formatter.writer}).FormatReceivers(receivers)
+}
+
 // FormatSilences formats the silences into a readable string.
 func (formatter *ExtendedFormatter) FormatSilences(silences []models.GettableSilence) error {
 	w := tabwriter.NewWriter(formatter.writer, 0, 0, 2, ' ', 0)

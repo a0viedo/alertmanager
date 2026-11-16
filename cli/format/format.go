@@ -38,6 +38,7 @@ type Formatter interface {
 	FormatSilences([]models.GettableSilence) error
 	FormatAlerts([]*models.GettableAlert) error
 	FormatConfig(*models.AlertmanagerStatus) error
+	FormatReceivers([]string) error
 	FormatClusterStatus(status *models.ClusterStatus) error
 }
 

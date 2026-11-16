@@ -33,6 +33,10 @@ func (formatter *JSONFormatter) SetOutput(writer io.Writer) {
 	formatter.writer = writer
 }
 
+func (formatter *JSONFormatter) FormatReceivers(receivers []string) error {
+	return json.NewEncoder(formatter.writer).Encode(receivers)
+}
+
 func (formatter *JSONFormatter) FormatSilences(silences []models.GettableSilence) error {
 	enc := json.NewEncoder(formatter.writer)
 	return enc.Encode(silences)

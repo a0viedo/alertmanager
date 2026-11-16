@@ -51,6 +51,9 @@ var (
 
 func initMatchersCompat(_ *kingpin.ParseContext) error {
 	promslogConfig := &promslog.Config{Writer: os.Stdout}
+	if output == "json" {
+		promslogConfig.Writer = os.Stderr
+	}
 	if verbose {
 		promslogConfig.Level = promslog.NewLevel()
 		_ = promslogConfig.Level.Set("debug")

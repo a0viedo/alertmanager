@@ -15,7 +15,9 @@ package cli
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 
@@ -23,6 +25,7 @@ import (
 	"github.com/xlab/treeprint"
 
 	"github.com/prometheus/alertmanager/api/v2/models"
+	"github.com/prometheus/alertmanager/cli/format"
 	"github.com/prometheus/alertmanager/dispatch"
 	"github.com/prometheus/alertmanager/matcher/compat"
 	"github.com/prometheus/alertmanager/pkg/labels"
@@ -64,12 +67,12 @@ func resolveAlertReceivers(mainRoute *dispatch.Route, labels *models.LabelSet) (
 	return receivers, nil
 }
 
-func printMatchingTree(mainRoute *dispatch.Route, ls models.LabelSet) {
+func printMatchingTree(w io.Writer, mainRoute *dispatch.Route, ls models.LabelSet) {
 	tree := treeprint.New()
 	getMatchingTree(mainRoute, tree, ls)
-	fmt.Println("Matching routes:")
-	fmt.Println(tree.String())
-	fmt.Print("\n")
+	fmt.Fprintln(w, "Matching routes:")
+	fmt.Fprintln(w, tree.String())
+	fmt.Fprintln(w)
 }
 
 func (c *routingShow) routingTestAction(ctx context.Context, _ *kingpin.ParseContext) error {
@@ -94,18 +97,30 @@ func (c *routingShow) routingTestAction(ctx context.Context, _ *kingpin.ParseCon
 		ls[matcher.Name] = matcher.Value
 	}
 
+	diagnostics := os.Stdout
+	if output == "json" {
+		diagnostics = os.Stderr
+	}
 	if c.debugTree {
-		printMatchingTree(mainRoute, ls)
+		printMatchingTree(diagnostics, mainRoute, ls)
 	}
 
 	receivers, err := resolveAlertReceivers(mainRoute, &ls)
-	receiversSlug := strings.Join(receivers, ",")
-	fmt.Printf("%s\n", receiversSlug)
+	if err != nil {
+		return err
+	}
+	formatter, found := format.Formatters[output]
+	if !found {
+		return errors.New("unknown output formatter")
+	}
+	if err := formatter.FormatReceivers(receivers); err != nil {
+		return err
+	}
 
-	if c.expectedReceivers != "" && c.expectedReceivers != receiversSlug {
-		fmt.Printf("WARNING: Expected receivers did not match resolved receivers.\n")
+	if c.expectedReceivers != "" && c.expectedReceivers != strings.Join(receivers, ",") {
+		fmt.Fprintln(diagnostics, "WARNING: Expected receivers did not match resolved receivers.")
 		os.Exit(1)
 	}
 
-	return err
+	return nil
 }

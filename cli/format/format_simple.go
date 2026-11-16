@@ -36,6 +36,11 @@ func (formatter *SimpleFormatter) SetOutput(writer io.Writer) {
 	formatter.writer = writer
 }
 
+func (formatter *SimpleFormatter) FormatReceivers(receivers []string) error {
+	_, err := fmt.Fprintln(formatter.writer, strings.Join(receivers, ","))
+	return err
+}
+
 func (formatter *SimpleFormatter) FormatSilences(silences []models.GettableSilence) error {
 	w := tabwriter.NewWriter(formatter.writer, 0, 0, 2, ' ', 0)
 	sort.Sort(ByEndAt(silences))

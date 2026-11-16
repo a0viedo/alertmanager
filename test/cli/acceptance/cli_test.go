@@ -17,6 +17,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/exec"
 	"testing"
 	"time"
 
@@ -272,6 +273,31 @@ receivers:
 	out, err := am.TestRoute("{foo=bar}")
 	require.EqualError(t, err, "exit status 1")
 	require.Equal(t, "amtool: error: Failed to parse labels: unexpected open or close brace: {foo=bar}\n\n", string(out))
+}
+
+func TestRoutesTestJSON(t *testing.T) {
+	t.Parallel()
+
+	args := []string{"config", "routes", "test", "--config.file=../../../cli/testdata/conf.routing-reverted.yml", "--output=json", "--tree", "--verbose"}
+	for _, tc := range []struct {
+		expected string
+		matches  bool
+	}{
+		{"test2,test1", true},
+		{"test1,test2", false},
+	} {
+		cmd := exec.CommandContext(t.Context(), "../../../amtool", append(args, "--verify.receivers="+tc.expected, "test=2")...)
+		out, err := cmd.Output()
+		if tc.matches {
+			require.NoError(t, err)
+		} else {
+			var exitErr *exec.ExitError
+			require.ErrorAs(t, err, &exitErr)
+			require.Equal(t, 1, exitErr.ExitCode())
+			require.Contains(t, string(exitErr.Stderr), "Expected receivers did not match")
+		}
+		require.JSONEq(t, `["test2","test1"]`, string(out))
+	}
 }
 
 func TestSilenceImport(t *testing.T) {
